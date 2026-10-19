@@ -1,0 +1,90 @@
+KILLER NAME PUZZLE — SOLUTION KEY
+=======================================================
+
+Killer: Catherine
+Internal killer page: 375
+Total entries: 30,000
+Distinct names: 29,999
+Total pages: 750
+Only repeated name: Oliver (twice)
+
+VERIFICATION OF THE 18 CLUES
+=======================================================
+
+1. The killer's name is longer than three letters.
+Result: PASS
+Explanation: Catherine has 9 letters.
+
+2. The killer's name does not start with an S.
+Result: PASS
+Explanation: The name starts with C.
+
+3. The killer's name contains at least two vowels.
+Result: PASS
+Explanation: Catherine contains 4 vowels.
+
+4. The killer is on a page with a repeated name.
+Result: PASS
+Explanation: Oliver appears twice on the killer's page.
+
+5. The killer's name has no consecutive repeated letter.
+Result: PASS
+Explanation: No consecutive letters are identical.
+
+6. The killer's page is between Anna's page and Zack's page.
+Result: PASS
+Explanation: Anna: 100; killer: 375; Zack: 600.
+
+7. The killer's name is not six letters long.
+Result: PASS
+Explanation: Catherine has 9 letters.
+
+8. The letters x, y and z are not in the killer's name.
+Result: PASS
+Explanation: None of x, y or z occurs in the name.
+
+9. A three-letter name is no more than ten names away.
+Result: PASS
+Explanation: Eli is 1 entries away.
+
+10. The first name on the killer's page shares a letter with the killer.
+Result: PASS
+Explanation: The first entry is Oliver.
+
+11. The killer's page contains fewer than three names starting with M.
+Result: PASS
+Explanation: 0 names start with M.
+
+12. A Kardashian is within four pages of the killer.
+Result: PASS
+Explanation: Kim is on page 373.
+
+13. The killer is not on a page with an even number of names.
+Result: PASS
+Explanation: The killer's page has 39 entries.
+
+14. The opposite page contains a US president's first name.
+Result: PASS
+Explanation: Page 374 contains George.
+
+15. The killer appears in a chapter with a place in its name.
+Result: PASS
+Explanation: Chapter 13: London and the English Countryside.
+
+16. The killer's page is no more than one page away from Sasha.
+Result: PASS
+Explanation: Sasha is on page 374.
+
+17. The killer's chapter contains all four Beatles.
+Result: PASS
+Explanation: John, Paul, George and Ringo are in the same chapter.
+
+18. The killer isn't Alice.
+Result: PASS
+Explanation: The killer is Catherine.
+
+CANDIDATE CHECK
+=======================================================
+- Catherine
+
+Only Catherine satisfies all name-level clues on the killer's page.
