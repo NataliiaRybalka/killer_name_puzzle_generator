@@ -17,9 +17,9 @@ Features:
     - 30,000 name entries.
     - 29,999 distinct names.
     - Exactly one duplicated name: Oliver.
-    - No visible page numbers.
+    - Page numbers at the bottom of every page.
     - No visible numbering beside names.
-    - 25 chapters with English place-based titles.
+    - 25 chapters; only some titles contain a place.
     - Chapters span as many pages as necessary.
     - Chapter titles appear only at chapter beginnings.
     - Automatic page layout.
@@ -33,6 +33,7 @@ import re
 import urllib.request
 
 from collections import Counter
+from itertools import zip_longest
 from pathlib import Path
 
 from reportlab.lib.pagesizes import A4
@@ -65,34 +66,40 @@ NAMES_URL = (
     "hackerb9/ssa-baby-names/main/allnames.txt"
 )
 
+# (title, has a place in its title).
 # The chapter containing the killer must have a place in its title.
-CHAPTER_TITLES = [
-    "New York and the Hudson Valley",
-    "Paris and the French Countryside",
-    "Rome and the Italian Coast",
-    "The Scottish Highlands",
-    "Tokyo and Mount Fuji",
-    "The Canadian Rockies",
-    "Sydney and the Australian Coast",
-    "The Streets of Madrid",
-    "The Swiss Alps",
-    "Amsterdam and the Netherlands",
-    "The Greek Islands",
-    "Berlin and the Brandenburg Region",
-    "London and the English Countryside",
-    "The Streets of Dublin",
-    "The Norwegian Fjords",
-    "Cape Town and Table Mountain",
-    "The Streets of Prague",
-    "The Amazon and South America",
-    "The Beaches of California",
-    "The Streets of Lisbon",
-    "The Nile and Ancient Egypt",
-    "The Mountains of Colorado",
-    "The Coast of New Zealand",
-    "The Streets of Vienna",
-    "The Baltic Coast",
+# Titles without a place avoid any geographic word, so that
+# clue 15 eliminates those chapters unambiguously.
+CHAPTERS = [
+    ("Whispers in the Dark", False),
+    ("Paris and the French Countryside", True),
+    ("The Last Letter", False),
+    ("The Scottish Highlands", True),
+    ("Secrets and Lies", False),
+    ("Tokyo and Mount Fuji", True),
+    ("A Matter of Trust", False),
+    ("The Streets of Madrid", True),
+    ("Silent Witnesses", False),
+    ("Amsterdam and the Netherlands", True),
+    ("Echoes of the Past", False),
+    ("The Midnight Hour", False),
+    ("London and the English Countryside", True),
+    ("Broken Promises", False),
+    ("The Norwegian Fjords", True),
+    ("Shadows and Masks", False),
+    ("The Streets of Prague", True),
+    ("The Final Clue", False),
+    ("The Beaches of California", True),
+    ("Unspoken Truths", False),
+    ("The Nile and Ancient Egypt", True),
+    ("Strangers at Midnight", False),
+    ("The Coast of New Zealand", True),
+    ("Fading Footsteps", False),
+    ("Rome and the Italian Coast", True),
 ]
+
+CHAPTER_TITLES = [title for title, _ in CHAPTERS]
+CHAPTER_HAS_PLACE = [has_place for _, has_place in CHAPTERS]
 
 BEATLES = {"John", "Paul", "George", "Ringo"}
 
@@ -385,13 +392,16 @@ def build_pages():
     # Place the killer's page.
     # --------------------------------------------------------
 
+    # The killer and Eli sit at the bottom of the left column,
+    # one directly below the other, so clue 9 holds whether
+    # the page is read column by column or row by row.
     killer_entries = [
         "Oliver",
         "Oliver",
-        *killer_fillers[:17],
+        *killer_fillers[:16],
         KILLER,
         "Eli",
-        *killer_fillers[17:],
+        *killer_fillers[16:],
     ]
 
     if len(killer_entries) != 39:
@@ -507,8 +517,8 @@ def build_pages():
 
 def create_pdf(pages):
     """
-    Render the book without visible page numbers or numbering
-    beside names.
+    Render the book with a page number at the bottom of every
+    page and no numbering beside names.
 
     Chapter titles appear only at the beginning of chapters.
     Continuation pages do not repeat the chapter heading.
@@ -601,7 +611,15 @@ def create_pdf(pages):
                 # No visible entry numbers.
                 pdf.drawString(x, y, name)
 
-        # Intentionally no visible page number.
+        # Page numbers let the solver count pages for clues
+        # 6, 12, 14 and 16.
+        pdf.setFont("Helvetica", 9)
+        pdf.drawCentredString(
+            width / 2,
+            margin_bottom / 2,
+            str(page_number),
+        )
+
         pdf.showPage()
 
         if page_number % 100 == 0:
@@ -661,6 +679,21 @@ def validate_puzzle(pages):
 
     killer_index = flat.index(KILLER)
     eli_index = flat.index("Eli")
+
+    # The same page read row by row across both columns,
+    # mirroring the column split in create_pdf.
+    split = (len(killer_entries) + 1) // 2
+    row_entries = [
+        name
+        for pair in zip_longest(
+            killer_entries[:split], killer_entries[split:]
+        )
+        for name in pair
+        if name is not None
+    ]
+    row_distance = abs(
+        row_entries.index(KILLER) - row_entries.index("Eli")
+    )
 
     chapter_number = chapter_number_for_page(killer_page)
     chapter_title = CHAPTER_TITLES[chapter_number - 1]
@@ -727,8 +760,11 @@ def validate_puzzle(pages):
         ),
         (
             "9. A three-letter name is no more than ten names away.",
-            len("Eli") == 3 and abs(killer_index - eli_index) <= 10,
-            f"Eli is {abs(killer_index - eli_index)} entries away.",
+            len("Eli") == 3
+            and abs(killer_index - eli_index) <= 10
+            and row_distance <= 10,
+            f"Eli is {abs(killer_index - eli_index)} entries away "
+            f"reading by column, {row_distance} reading by row.",
         ),
         (
             "10. The first name on the killer's page shares a letter with the killer.",
@@ -767,8 +803,10 @@ def validate_puzzle(pages):
         ),
         (
             "15. The killer appears in a chapter with a place in its name.",
-            "London" in chapter_title,
-            f"Chapter {chapter_number}: {chapter_title}.",
+            CHAPTER_HAS_PLACE[chapter_number - 1],
+            f"Chapter {chapter_number}: {chapter_title}. "
+            f"{sum(CHAPTER_HAS_PLACE)} of {len(CHAPTERS)} chapter "
+            "titles contain a place.",
         ),
         (
             "16. The killer's page is no more than one page away from Sasha.",
@@ -804,6 +842,14 @@ def validate_puzzle(pages):
     assert len(counts) == TOTAL_ENTRIES - 1
 
     assert len(killer_entries) == 39
+
+    assert len(CHAPTERS) == chapter_number_for_page(TOTAL_PAGES)
+
+    # Clue 15 must eliminate at least one chapter.
+    assert not all(CHAPTER_HAS_PLACE), (
+        "Every chapter title contains a place, so clue 15 "
+        "eliminates nothing."
+    )
 
     # All names on the killer's page except Catherine must fail
     # at least one name-level clue.
