@@ -1,43 +1,43 @@
 KILLER NAME PUZZLE — SOLUTION KEY
 =======================================================
 
-Killer: Catherine
-Internal killer page: 375
+Killer: Victoria
+Killer's page: 163
 Total entries: 30,000
 Distinct names: 29,999
-Total pages: 750
-Only repeated name: Oliver (twice)
+Total pages: 250
+Only repeated name: Edward (twice)
 
 VERIFICATION OF THE 18 CLUES
 =======================================================
 
 1. The killer's name is longer than three letters.
 Result: PASS
-Explanation: Catherine has 9 letters.
+Explanation: Victoria has 8 letters.
 
 2. The killer's name does not start with an S.
 Result: PASS
-Explanation: The name starts with C.
+Explanation: The name starts with V.
 
 3. The killer's name contains at least two vowels.
 Result: PASS
-Explanation: Catherine contains 4 vowels.
+Explanation: Victoria contains 4 vowels.
 
 4. The killer is on a page with a repeated name.
 Result: PASS
-Explanation: Oliver appears twice on the killer's page.
+Explanation: Edward appears twice on the killer's page.
 
 5. The killer's name has no consecutive repeated letter.
 Result: PASS
 Explanation: No consecutive letters are identical.
 
-6. The killer's page is between Anna's page and Zack's page.
+6. The killer's page is between Amelia's page and Zoe's page.
 Result: PASS
-Explanation: Anna: 100; killer: 375; Zack: 600.
+Explanation: Amelia: 50; killer: 163; Zoe: 217.
 
 7. The killer's name is not six letters long.
 Result: PASS
-Explanation: Catherine has 9 letters.
+Explanation: Victoria has 8 letters.
 
 8. The letters x, y and z are not in the killer's name.
 Result: PASS
@@ -45,11 +45,11 @@ Explanation: None of x, y or z occurs in the name.
 
 9. A three-letter name is no more than ten names away.
 Result: PASS
-Explanation: Eli is 1 entries away reading by column, 2 reading by row.
+Explanation: Leo is 1 entries away reading by column, 4 reading by row.
 
 10. The first name on the killer's page shares a letter with the killer.
 Result: PASS
-Explanation: The first entry is Oliver.
+Explanation: The first entry is Edward.
 
 11. The killer's page contains fewer than three names starting with M.
 Result: PASS
@@ -57,34 +57,151 @@ Explanation: 0 names start with M.
 
 12. A Kardashian is within four pages of the killer.
 Result: PASS
-Explanation: Kim is on page 373.
+Explanation: Khloe is on page 160.
 
 13. The killer is not on a page with an even number of names.
 Result: PASS
-Explanation: The killer's page has 39 entries.
+Explanation: The killer's page has 119 entries.
 
 14. The opposite page contains a US president's first name.
 Result: PASS
-Explanation: Page 374 contains George.
+Explanation: page 162: George; page 164: Abraham.
 
 15. The killer appears in a chapter with a place in its name.
 Result: PASS
-Explanation: Chapter 13: London and the English Countryside. 12 of 25 chapter titles contain a place.
+Explanation: Chapter 17: The Streets of Prague. 12 of 25 chapter titles contain a place.
 
-16. The killer's page is no more than one page away from Sasha.
+16. The killer's page is no more than one page away from Nadia.
 Result: PASS
-Explanation: Sasha is on page 374.
+Explanation: Nadia is on page 162.
 
 17. The killer's chapter contains all four Beatles.
 Result: PASS
 Explanation: John, Paul, George and Ringo are in the same chapter.
 
-18. The killer isn't Alice.
+18. The killer isn't Valerie.
 Result: PASS
-Explanation: The killer is Catherine.
+Explanation: Valerie is on the killer's page and passes every other name clue.
 
-CANDIDATE CHECK
+NAMES ON THE KILLER'S PAGE
 =======================================================
-- Catherine
+- Edward: eliminated by clue 7
+- Syvester: eliminated by clue 2, 8
+- Jaidynn: eliminated by clue 5, 8
+- Libera: eliminated by clue 7
+- Cairra: eliminated by clue 5, 7
+- Pal: eliminated by clue 1, 3
+- Nyeema: eliminated by clue 5, 7, 8
+- Kiiara: eliminated by clue 5, 7
+- Yuvette: eliminated by clue 5, 8
+- Cynda: eliminated by clue 3, 8
+- Tho: eliminated by clue 1, 3
+- Lachlynn: eliminated by clue 3, 5, 8
+- Jammy: eliminated by clue 3, 5, 8
+- Damaya: eliminated by clue 7, 8
+- Ansell: eliminated by clue 5, 7
+- Seanne: eliminated by clue 2, 5, 7
+- Timthy: eliminated by clue 3, 7, 8
+- Shauntasia: eliminated by clue 2
+- Shaiann: eliminated by clue 2, 5
+- Caroly: eliminated by clue 7, 8
+- Klutch: eliminated by clue 3, 7
+- Jamyis: eliminated by clue 7, 8
+- Nagely: eliminated by clue 7, 8
+- Linsley: eliminated by clue 8
+- Khrystin: eliminated by clue 3, 8
+- Via: eliminated by clue 1
+- Sherelene: eliminated by clue 2
+- Victoria: satisfies every name clue
+- Leo: eliminated by clue 1
+- Kyndrix: eliminated by clue 3, 8
+- Synthia: eliminated by clue 2, 8
+- Dailey: eliminated by clue 7, 8
+- Drayke: eliminated by clue 7, 8
+- Sundos: eliminated by clue 2, 7
+- Arliss: eliminated by clue 5, 7
+- Corry: eliminated by clue 3, 5, 8
+- Brynja: eliminated by clue 3, 7, 8
+- Jayetta: eliminated by clue 5, 8
+- Karyssa: eliminated by clue 5, 8
+- Liyana: eliminated by clue 7, 8
+- Tousha: eliminated by clue 7
+- Shyannah: eliminated by clue 2, 5, 8
+- Jennabella: eliminated by clue 5
+- Yeraldo: eliminated by clue 8
+- Codylee: eliminated by clue 5, 8
+- Bayard: eliminated by clue 7, 8
+- Dayani: eliminated by clue 7, 8
+- Suzon: eliminated by clue 2, 8
+- Smya: eliminated by clue 2, 3, 8
+- Rexine: eliminated by clue 7, 8
+- Kitty: eliminated by clue 3, 5, 8
+- Shivaansh: eliminated by clue 2, 5
+- Galaxi: eliminated by clue 7, 8
+- Selva: eliminated by clue 2
+- Zavannah: eliminated by clue 5, 8
+- Kes: eliminated by clue 1, 3
+- Sheeba: eliminated by clue 2, 5, 7
+- Lyzbeth: eliminated by clue 3, 8
+- Salmai: eliminated by clue 2, 7
+- Raymar: eliminated by clue 7, 8
+- Geniya: eliminated by clue 7, 8
+- Fher: eliminated by clue 3
+- Jea: eliminated by clue 1
+- Alwood: eliminated by clue 5, 7
+- Samiha: eliminated by clue 2, 7
+- Earley: eliminated by clue 7, 8
+- Sidalee: eliminated by clue 2, 5
+- Deveny: eliminated by clue 7, 8
+- Aissata: eliminated by clue 5
+- Naymar: eliminated by clue 7, 8
+- Seth: eliminated by clue 2, 3
+- Garv: eliminated by clue 3
+- Kassy: eliminated by clue 3, 5, 8
+- Jazari: eliminated by clue 7, 8
+- Iry: eliminated by clue 1, 3, 8
+- Adaugo: eliminated by clue 7
+- Aaryana: eliminated by clue 5, 8
+- Ayerim: eliminated by clue 7, 8
+- Novalynn: eliminated by clue 5, 8
+- Azelea: eliminated by clue 7, 8
+- Hussen: eliminated by clue 5, 7
+- Shakir: eliminated by clue 2, 7
+- Ioanna: eliminated by clue 5, 7
+- Serriah: eliminated by clue 2, 5
+- Saarang: eliminated by clue 2, 5
+- Luddie: eliminated by clue 5, 7
+- Ceyonna: eliminated by clue 5, 8
+- Laremy: eliminated by clue 7, 8
+- Jabbar: eliminated by clue 5, 7
+- Nazeeh: eliminated by clue 5, 7, 8
+- Valerie: eliminated by clue 18
+- Kiffin: eliminated by clue 5, 7
+- Saryah: eliminated by clue 2, 7, 8
+- Jalayiah: eliminated by clue 8
+- Niv: eliminated by clue 1, 3
+- Knya: eliminated by clue 3, 8
+- Cie: eliminated by clue 1
+- Wang: eliminated by clue 3
+- Zhanea: eliminated by clue 7, 8
+- Aadaya: eliminated by clue 5, 7, 8
+- Havery: eliminated by clue 7, 8
+- Kenlyn: eliminated by clue 3, 7, 8
+- Senna: eliminated by clue 2, 5
+- Tywanna: eliminated by clue 5, 8
+- Solara: eliminated by clue 2, 7
+- Briggs: eliminated by clue 3, 5, 7
+- Finnis: eliminated by clue 5, 7
+- Dilyla: eliminated by clue 7, 8
+- Carriebell: eliminated by clue 5
+- Kyiara: eliminated by clue 7, 8
+- Jennely: eliminated by clue 5, 8
+- Elliot: eliminated by clue 5, 7
+- Kyndyl: eliminated by clue 3, 7, 8
+- Nafees: eliminated by clue 5, 7
+- Yandy: eliminated by clue 3, 8
+- Bri: eliminated by clue 1, 3
+- Kazuye: eliminated by clue 7, 8
+- Bronna: eliminated by clue 5, 7
 
-Only Catherine satisfies all name-level clues on the killer's page.
+Only Victoria satisfies all name-level clues on the killer's page.

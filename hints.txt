@@ -1,0 +1,41 @@
+KILLER NAME PUZZLE
+
+18 CLUES
+=======================================================
+
+1. The killer's name is longer than three letters. - Ім'я вбивці довше за три літери.
+
+2. The killer's name does not start with an S. - Ім'я вбивці не починається на літеру «S».
+
+3. The killer's name contains at least two vowels. - Ім'я вбивці містить принаймні дві голосні літери.
+
+4. The killer is on a page with a repeated name. - Вбивця — на сторінці з повторюваним ім’ям.
+
+5. The killer's name has no consecutive repeated letter. - В імені вбивці немає послідовних повторюваних літер.
+
+6. The killer's page is between Amelia's page and Zoe's page. - Сторінка вбивці знаходиться між сторінкою Amelia та сторінкою Zoe.
+
+7. The killer's name is not six letters long. - Ім'я вбивці не складається із шести літер.
+
+8. The letters x, y and z are not in the killer's name. - У імені вбивці немає літер x, y та z.
+
+9. A three-letter name is no more than ten names away. - Ім’я з трьох літер — не далі ніж за десять імен звідси.
+
+10. The first name on the killer's page shares a letter with the killer. - Перше ім'я на сторінці вбивці має спільну літеру з ім'ям самого вбивці.
+
+11. The killer's page contains fewer than three names starting with M. - На сторінці вбивці міститься менше трьох імен, що починаються на літеру «М».
+
+12. A Kardashian is within four pages of the killer. - Кардаш’ян перебуває в межах чотирьох сторінок від убивці.
+
+13. The killer is not on a page with an even number of names. - Вбивця — не на сторінці, де вказано парну кількість імен.
+
+14. The opposite page contains a US president's first name. - На протилежній сторінці міститься ім'я президента США.
+
+15. The killer appears in a chapter with a place in its name. - Вбивця з’являється в розділі, у назві якого є згадка про певне місце.
+
+16. The killer's page is no more than one page away from Nadia. - Сторінка вбивці знаходиться не далі ніж за одну сторінку від Наді.
+
+17. The killer's chapter contains all four Beatles. - Розділ про вбивцю містить усіх чотирьох «Бітлз».
+
+18. The killer isn't Valerie. - Вбивця — не Valerie.
+

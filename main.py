@@ -16,130 +16,101 @@ Requirements:
 Features:
     - 30,000 name entries.
     - 29,999 distinct names.
-    - Exactly one duplicated name: Oliver.
+    - Exactly one duplicated name: REPEATED_NAME.
     - Page numbers at the bottom of every page.
     - No visible numbering beside names.
     - 25 chapters; only some titles contain a place.
-    - Chapters span as many pages as necessary.
     - Chapter titles appear only at chapter beginnings.
-    - Automatic page layout.
-    - Validation of all 18 clues.
+    - Names in COLUMNS columns, filled column by column.
+    - Validation of all 18 clues, including that every
+      name-level clue eliminates at least one name.
     - Separate answer key.
 """
 
-import io
+import math
 import random
 import re
 import urllib.request
 
 from collections import Counter
-from itertools import zip_longest
 from pathlib import Path
 
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
 from reportlab.pdfgen import canvas
 
-
-# ============================================================
-# CONFIGURATION
-# ============================================================
-
-OUTPUT_PDF = Path("killer_puzzle.pdf")
-OUTPUT_KEY = Path("solution_key.txt")
-
-TOTAL_ENTRIES = 30_000
-TOTAL_PAGES = 750
-ENTRIES_PER_PAGE = 40
-
-RANDOM_SEED = 20261019
-
-KILLER = "Catherine"
-KILLER_PAGE = 375
-
-# This is the only permitted duplicate.
-REPEATED_NAME = "Oliver"
-
-# Public dataset containing first names.
-NAMES_URL = (
-    "https://raw.githubusercontent.com/"
-    "hackerb9/ssa-baby-names/main/allnames.txt"
+from conf import (
+    BALANCING_PAGE,
+    BEATLES,
+    BEATLE_PAGES,
+    CHAPTERS,
+    CHAPTER_HAS_PLACE,
+    CHAPTER_TITLES,
+    COLUMNS,
+    DECOY,
+    ENTRIES_PER_PAGE,
+    FILLERS_PER_NAME_CLUE,
+    KARDASHIAN,
+    KARDASHIAN_FIRST_NAMES,
+    KILLER,
+    KILLER_PAGE,
+    KILLER_PAGE_SIZE,
+    LOWER_BOUND,
+    NAMES_URL,
+    NEIGHBOUR,
+    OUTPUT_KEY,
+    OUTPUT_PDF,
+    PAGES_PER_CHAPTER,
+    PRESIDENT_AFTER,
+    PRESIDENT_BEFORE,
+    PRESIDENT_FIRST_NAMES,
+    RANDOM_SEED,
+    RARE_INITIAL,
+    REPEATED_NAME,
+    SPECIAL_PLACEMENTS,
+    THREE_LETTER_NAME,
+    TOTAL_ENTRIES,
+    TOTAL_PAGES,
+    UPPER_BOUND,
+    VOWELS,
 )
 
-# (title, has a place in its title).
-# The chapter containing the killer must have a place in its title.
-# Titles without a place avoid any geographic word, so that
-# clue 15 eliminates those chapters unambiguously.
-CHAPTERS = [
-    ("Whispers in the Dark", False),
-    ("Paris and the French Countryside", True),
-    ("The Last Letter", False),
-    ("The Scottish Highlands", True),
-    ("Secrets and Lies", False),
-    ("Tokyo and Mount Fuji", True),
-    ("A Matter of Trust", False),
-    ("The Streets of Madrid", True),
-    ("Silent Witnesses", False),
-    ("Amsterdam and the Netherlands", True),
-    ("Echoes of the Past", False),
-    ("The Midnight Hour", False),
-    ("London and the English Countryside", True),
-    ("Broken Promises", False),
-    ("The Norwegian Fjords", True),
-    ("Shadows and Masks", False),
-    ("The Streets of Prague", True),
-    ("The Final Clue", False),
-    ("The Beaches of California", True),
-    ("Unspoken Truths", False),
-    ("The Nile and Ancient Egypt", True),
-    ("Strangers at Midnight", False),
-    ("The Coast of New Zealand", True),
-    ("Fading Footsteps", False),
-    ("Rome and the Italian Coast", True),
-]
 
-CHAPTER_TITLES = [title for title, _ in CHAPTERS]
-CHAPTER_HAS_PLACE = [has_place for _, has_place in CHAPTERS]
+# ============================================================
+# NAME CLUES
+# ============================================================
 
-BEATLES = {"John", "Paul", "George", "Ringo"}
+def has_double_letter(name):
+    lower = name.lower()
 
-PRESIDENT_FIRST_NAMES = {
-    "George", "John", "James", "Abraham", "Ulysses",
-    "Rutherford", "Chester", "Grover", "Benjamin",
-    "William", "Theodore", "Woodrow", "Warren",
-    "Calvin", "Herbert", "Franklin", "Harry",
-    "Dwight", "Lyndon", "Richard", "Gerald",
-    "Jimmy", "Ronald", "Bill", "Barack",
-    "Donald", "Joe",
+    return any(
+        lower[i] == lower[i + 1]
+        for i in range(len(lower) - 1)
+    )
+
+
+# Clues that describe the killer's name itself.
+NAME_CLUES = {
+    1: lambda name: len(name) > 3,
+    2: lambda name: not name.lower().startswith("s"),
+    3: lambda name: sum(ch in VOWELS for ch in name.lower()) >= 2,
+    5: lambda name: not has_double_letter(name),
+    7: lambda name: len(name) != 6,
+    8: lambda name: not any(ch in name.lower() for ch in "xyz"),
+    18: lambda name: name != DECOY,
 }
 
-KARDASHIAN_FIRST_NAMES = {
-    "Kim", "Kourtney", "Khloe", "Kendall", "Kylie"
-}
 
-VOWELS = set("aeiou")
+def failed_name_clues(name):
+    return [
+        number
+        for number, passes in NAME_CLUES.items()
+        if not passes(name)
+    ]
 
-# A 39-entry killer page makes the entry count odd.
-# The following page has 41 entries to preserve 30,000 total.
-#
-# The killer page contains:
-#   Oliver twice
-#   Catherine once
-#   Eli once
-#   35 other unique names
-#
-# All other names on this page are selected so that they fail
-# at least one of the killer-name length clues.
 
-SPECIAL_PAGES = {
-    100: {"Anna"},
-    373: {"Kim"},
-    374: {"George", "Sasha"},
-    361: {"John"},
-    362: {"Paul"},
-    363: {"Ringo"},
-    600: {"Zack"},
-}
+def name_satisfies_name_clues(name):
+    return not failed_name_clues(name)
 
 
 # ============================================================
@@ -230,9 +201,9 @@ def download_names():
 
 def chapter_number_for_page(page_number):
     """
-    There are 25 chapters, each covering 30 pages.
+    There are 25 chapters, each covering PAGES_PER_CHAPTER pages.
     """
-    return (page_number - 1) // 30 + 1
+    return (page_number - 1) // PAGES_PER_CHAPTER + 1
 
 
 def chapter_title_for_page(page_number):
@@ -242,58 +213,133 @@ def chapter_title_for_page(page_number):
 
 def page_size(page_number):
     """
-    Page 375 has 39 entries.
-    Page 376 has 41 entries.
-    Every other page has 40 entries.
-
-    Total:
-        750 pages
-        30,000 entries
+    KILLER_PAGE has one entry fewer than ENTRIES_PER_PAGE,
+    BALANCING_PAGE one more, so the book holds TOTAL_PAGES
+    full pages' worth: TOTAL_ENTRIES.
     """
     if page_number == KILLER_PAGE:
-        return 39
+        return KILLER_PAGE_SIZE
 
-    if page_number == KILLER_PAGE + 1:
-        return 41
+    if page_number == BALANCING_PAGE:
+        return ENTRIES_PER_PAGE + 1
 
     return ENTRIES_PER_PAGE
 
 
-def name_satisfies_name_clues(name):
+def column_layout(entries):
     """
-    Check clues that describe the killer's name itself.
+    Split a page into COLUMNS columns, filled column by column.
+    Every column except possibly the last has the same height.
     """
+    rows = math.ceil(len(entries) / COLUMNS)
 
-    lower = name.lower()
+    return [
+        entries[start:start + rows]
+        for start in range(0, len(entries), rows)
+    ]
 
-    return (
-        len(name) > 3
-        and not lower.startswith("s")
-        and sum(ch in VOWELS for ch in lower) >= 2
-        and not any(
-            lower[i] == lower[i + 1]
-            for i in range(len(lower) - 1)
-        )
-        and len(name) != 6
-        and not any(ch in lower for ch in "xyz")
-        and name != "Alice"
-    )
+
+def row_reading_order(entries):
+    """
+    The page's entries read row by row across all columns.
+    """
+    columns = column_layout(entries)
+
+    return [
+        column[row]
+        for row in range(len(columns[0]))
+        for column in columns
+        if row < len(column)
+    ]
 
 
 # ============================================================
 # BUILD THE BOOK
 # ============================================================
 
+def pick_killer_page_fillers(pool, rng, count):
+    """
+    Choose the other names on the killer's page.
+
+    Every filler fails at least one name clue. For each name
+    clue, FILLERS_PER_NAME_CLUE fillers fail that clue alone,
+    so the solver needs every name clue to reach the killer.
+    No filler starts with RARE_INITIAL (clue 11).
+    """
+
+    by_failed_clues = {}
+
+    for name in sorted(pool):
+        if name.startswith(RARE_INITIAL):
+            continue
+
+        failed = tuple(failed_name_clues(name))
+
+        if failed:
+            by_failed_clues.setdefault(failed, []).append(name)
+
+    fillers = []
+
+    # Clue 18 is covered by the decoy itself.
+    for number in NAME_CLUES:
+        if number == 18:
+            continue
+
+        single = by_failed_clues.get((number,), [])
+
+        if len(single) < FILLERS_PER_NAME_CLUE:
+            raise RuntimeError(
+                f"Not enough names that fail only clue {number}."
+            )
+
+        fillers += rng.sample(single, FILLERS_PER_NAME_CLUE)
+
+    chosen = set(fillers)
+
+    multiple = [
+        name
+        for failed, names in by_failed_clues.items()
+        if len(failed) > 1
+        for name in names
+        if name not in chosen
+    ]
+
+    fillers += rng.sample(multiple, count - len(fillers))
+    rng.shuffle(fillers)
+
+    return fillers
+
+
+def build_killer_page(fillers):
+    """
+    The repeated name opens the page twice. The killer and the
+    three-letter name sit at the bottom of the left column, one
+    directly below the other, so clue 9 holds whether the page
+    is read column by column or row by row.
+    """
+
+    column_height = math.ceil(KILLER_PAGE_SIZE / COLUMNS)
+    fillers_above_killer = column_height - 4
+
+    return [
+        REPEATED_NAME,
+        REPEATED_NAME,
+        *fillers[:fillers_above_killer],
+        KILLER,
+        THREE_LETTER_NAME,
+        *fillers[fillers_above_killer:],
+    ]
+
+
 def build_pages():
     """
     Build the complete book.
 
-    - 30,000 entries.
-    - 750 pages.
-    - 40 entries per page, except:
-        * killer page: 39 entries;
-        * following page: 41 entries.
-    - Exactly one duplicate: Oliver appears twice.
+    - TOTAL_ENTRIES entries on TOTAL_PAGES pages.
+    - ENTRIES_PER_PAGE entries per page, except:
+        * killer page: one fewer;
+        * balancing page: one more.
+    - Exactly one duplicate: REPEATED_NAME appears twice.
     - Required names are placed on designated pages.
     """
 
@@ -301,134 +347,55 @@ def build_pages():
 
     names = download_names()
 
-    # Names that must be placed at specific locations.
-    reserved_names = {
-        "Anna",
-        "Zack",
-        "Kim",
-        "Sasha",
-        "George",
-        "John",
-        "Paul",
-        "Ringo",
-        "Oliver",
-        "Catherine",
-        "Eli",
-        "Alice",
+    killer_page_names = {
+        REPEATED_NAME, KILLER, THREE_LETTER_NAME, DECOY
+    }
+
+    reserved_names = killer_page_names | {
+        name
+        for placed in SPECIAL_PLACEMENTS.values()
+        for name in placed
     }
 
     # Ensure all required names are available.
     names.update(reserved_names)
 
-    # --------------------------------------------------------
-    # Prepare the filler names for the killer's page.
-    # --------------------------------------------------------
-
-    pool = names - reserved_names
-
-    filler_candidates = [
-        name
-        for name in pool
-        if len(name) in (3, 6)
-        and not name.startswith("M")
-        and name != "Alice"
-    ]
+    # The placed Kardashian is the only one in the book, so
+    # clue 12 points to a single page. Sorting keeps the book
+    # reproducible for a given RANDOM_SEED.
+    pool = sorted(names - reserved_names - KARDASHIAN_FIRST_NAMES)
 
     rng = random.Random(RANDOM_SEED)
-    rng.shuffle(filler_candidates)
 
-    if len(filler_candidates) < 35:
-        raise RuntimeError(
-            "Not enough suitable filler names for the killer's page."
-        )
+    # The decoy takes one of the filler slots, at random.
+    fillers = pick_killer_page_fillers(
+        pool, rng, KILLER_PAGE_SIZE - 5
+    )
+    fillers.insert(rng.randrange(len(fillers) + 1), DECOY)
 
-    killer_fillers = filler_candidates[:35]
-
-    # Remove these names from the general pool so that they
-    # cannot be used a second time elsewhere.
-    used_killer_fillers = set(killer_fillers)
-
-    remaining_names = list(pool - used_killer_fillers)
+    used_fillers = set(fillers)
+    remaining_names = [
+        name for name in pool if name not in used_fillers
+    ]
     rng.shuffle(remaining_names)
 
     # --------------------------------------------------------
     # Create pages with the desired capacities.
     # --------------------------------------------------------
 
-    pages = []
-
-    for page_number in range(1, TOTAL_PAGES + 1):
-        if page_number == KILLER_PAGE:
-            size = 39
-        elif page_number == KILLER_PAGE + 1:
-            size = 41
-        else:
-            size = ENTRIES_PER_PAGE
-
-        pages.append([None] * size)
-
-    # --------------------------------------------------------
-    # Helper to place a name at a particular position.
-    # Positions are 1-based.
-    # --------------------------------------------------------
-
-    def put(page_number, position, name):
-        page = pages[page_number - 1]
-        index = position - 1
-
-        if not 0 <= index < len(page):
-            raise ValueError(
-                f"Invalid position {position} on page {page_number}."
-            )
-
-        if page[index] is not None:
-            raise ValueError(
-                f"Page {page_number}, position {position} is occupied."
-            )
-
-        page[index] = name
-
-    # --------------------------------------------------------
-    # Place the killer's page.
-    # --------------------------------------------------------
-
-    # The killer and Eli sit at the bottom of the left column,
-    # one directly below the other, so clue 9 holds whether
-    # the page is read column by column or row by row.
-    killer_entries = [
-        "Oliver",
-        "Oliver",
-        *killer_fillers[:16],
-        KILLER,
-        "Eli",
-        *killer_fillers[16:],
+    pages = [
+        [None] * page_size(page_number)
+        for page_number in range(1, TOTAL_PAGES + 1)
     ]
 
-    if len(killer_entries) != 39:
-        raise AssertionError(
-            f"Killer page should contain 39 entries, "
-            f"but contains {len(killer_entries)}."
-        )
+    pages[KILLER_PAGE - 1] = build_killer_page(fillers)
 
-    pages[KILLER_PAGE - 1] = killer_entries
+    for page_number, required_names in SPECIAL_PLACEMENTS.items():
+        if page_number == KILLER_PAGE:
+            raise ValueError("The killer's page is built separately.")
 
-    # --------------------------------------------------------
-    # Place the names required by the clues.
-    # --------------------------------------------------------
-
-    special_placements = {
-        100: ["Anna"],
-        373: ["Kim"],
-        374: ["George", "Sasha"],
-        361: ["John"],
-        362: ["Paul"],
-        363: ["Ringo"],
-        600: ["Zack"],
-    }
-
-    for page_number, required_names in special_placements.items():
-        for position, name in enumerate(required_names, start=1):
-            put(page_number, position, name)
+        for index, name in enumerate(required_names):
+            pages[page_number - 1][index] = name
 
     # --------------------------------------------------------
     # Fill every remaining position.
@@ -436,16 +403,14 @@ def build_pages():
 
     cursor = 0
 
-    for page_number, page in enumerate(pages, start=1):
+    for page in pages:
         for index, current in enumerate(page):
             if current is not None:
                 continue
 
             if cursor >= len(remaining_names):
                 raise RuntimeError(
-                    "Not enough unique names to fill all pages. "
-                    f"Filled {cursor:,} additional positions, "
-                    f"but more are required."
+                    "Not enough unique names to fill all pages."
                 )
 
             page[index] = remaining_names[cursor]
@@ -455,23 +420,7 @@ def build_pages():
     # Validate the completed book.
     # --------------------------------------------------------
 
-    all_entries = [
-        name
-        for page in pages
-        for name in page
-    ]
-
-    if len(all_entries) != TOTAL_ENTRIES:
-        raise AssertionError(
-            f"Expected {TOTAL_ENTRIES:,} entries, "
-            f"got {len(all_entries):,}."
-        )
-
-    if len(pages) != TOTAL_PAGES:
-        raise AssertionError(
-            f"Expected {TOTAL_PAGES:,} pages, got {len(pages):,}."
-        )
-
+    all_entries = [name for page in pages for name in page]
     counts = Counter(all_entries)
 
     duplicates = {
@@ -480,15 +429,15 @@ def build_pages():
         if count > 1
     }
 
-    if duplicates != {"Oliver": 2}:
+    if len(all_entries) != TOTAL_ENTRIES:
         raise AssertionError(
-            f"Unexpected duplicate names: {duplicates}"
+            f"Expected {TOTAL_ENTRIES:,} entries, "
+            f"got {len(all_entries):,}."
         )
 
-    if len(counts) != TOTAL_ENTRIES - 1:
+    if duplicates != {REPEATED_NAME: 2}:
         raise AssertionError(
-            f"Expected {TOTAL_ENTRIES - 1:,} distinct names, "
-            f"got {len(counts):,}."
+            f"Unexpected duplicate names: {duplicates}"
         )
 
     if pages[KILLER_PAGE - 1].count(KILLER) != 1:
@@ -496,16 +445,9 @@ def build_pages():
             "The killer must appear exactly once on the killer's page."
         )
 
-    if pages[KILLER_PAGE - 1].count("Oliver") != 2:
-        raise AssertionError(
-            "Oliver must appear twice on the killer's page."
-        )
-
     print(f"Pages created: {len(pages):,}")
     print(f"Entries created: {len(all_entries):,}")
     print(f"Distinct names: {len(counts):,}")
-    print(f"Additional names used: {cursor:,}")
-    print("Only repeated name: Oliver")
     print("Page structure validated.")
 
     return pages
@@ -543,17 +485,15 @@ def create_pdf(pages):
     margin_top = 18 * mm
     margin_bottom = 16 * mm
 
-    left_x = margin_left
-    right_x = width / 2 + 5 * mm
+    column_width = (width - margin_left - margin_right) / COLUMNS
+    column_gap = 3 * mm
 
-    # The entries are laid out in two columns.
-    line_height = 10 * mm
+    line_height = 8 * mm
 
     for page_number, entries in enumerate(pages, start=1):
         chapter_number = chapter_number_for_page(page_number)
 
-        # A chapter begins every 30 pages.
-        is_chapter_start = (page_number - 1) % 30 == 0
+        is_chapter_start = (page_number - 1) % PAGES_PER_CHAPTER == 0
 
         if is_chapter_start:
             title = CHAPTER_TITLES[chapter_number - 1]
@@ -586,16 +526,9 @@ def create_pdf(pages):
             # No chapter title on continuation pages.
             start_y = height - margin_top
 
-        split = (len(entries) + 1) // 2
+        for column_index, column in enumerate(column_layout(entries)):
+            x = margin_left + column_index * column_width
 
-        left_column = entries[:split]
-        right_column = entries[split:]
-
-        # Use a slightly smaller font for long names.
-        for column, x in (
-            (left_column, left_x),
-            (right_column, right_x),
-        ):
             for row, name in enumerate(column):
                 y = start_y - row * line_height
 
@@ -605,7 +538,15 @@ def create_pdf(pages):
                         "Reduce line_height or font size."
                     )
 
+                # Use a smaller font for names too wide for a column.
                 font_size = 9.5 if len(name) <= 13 else 8.5
+
+                while (
+                    pdf.stringWidth(name, "Helvetica", font_size)
+                    > column_width - column_gap
+                ):
+                    font_size -= 0.5
+
                 pdf.setFont("Helvetica", font_size)
 
                 # No visible entry numbers.
@@ -636,7 +577,8 @@ def create_pdf(pages):
 
 def validate_puzzle(pages):
     """
-    Check all 18 clues against the generated book.
+    Check all 18 clues against the generated book, and check
+    that a solver applying them reaches the killer alone.
 
     If a condition fails, the program stops rather than
     producing an apparently valid answer key.
@@ -645,12 +587,7 @@ def validate_puzzle(pages):
     killer_page = KILLER_PAGE
     killer_entries = pages[killer_page - 1]
 
-    flat = [
-        name
-        for page in pages
-        for name in page
-    ]
-
+    flat = [name for page in pages for name in page]
     counts = Counter(flat)
 
     def unique_page_of(name):
@@ -668,46 +605,53 @@ def validate_puzzle(pages):
 
         return matches[0]
 
-    anna_page = unique_page_of("Anna")
-    zack_page = unique_page_of("Zack")
-    kim_page = unique_page_of("Kim")
-    sasha_page = unique_page_of("Sasha")
+    lower_name, upper_name = LOWER_BOUND[0], UPPER_BOUND[0]
+    lower_page = unique_page_of(lower_name)
+    upper_page = unique_page_of(upper_name)
+    kardashian_page = unique_page_of(KARDASHIAN[0])
+    neighbour_page = unique_page_of(NEIGHBOUR[0])
 
-    # The page opposite the killer is the preceding page
-    # for this puzzle's intended book layout.
-    opposite_page = killer_page - 1
+    def presidents_on(page_number):
+        if not 1 <= page_number <= TOTAL_PAGES:
+            return []
+
+        return [
+            name
+            for name in pages[page_number - 1]
+            if name in PRESIDENT_FIRST_NAMES
+        ]
+
+    # In a printed book the opposite page is the preceding one;
+    # read on screen, it may be taken as the following one.
+    opposite_pages = (killer_page - 1, killer_page + 1)
 
     killer_index = flat.index(KILLER)
-    eli_index = flat.index("Eli")
+    three_letter_index = flat.index(THREE_LETTER_NAME)
 
-    # The same page read row by row across both columns,
-    # mirroring the column split in create_pdf.
-    split = (len(killer_entries) + 1) // 2
-    row_entries = [
-        name
-        for pair in zip_longest(
-            killer_entries[:split], killer_entries[split:]
-        )
-        for name in pair
-        if name is not None
-    ]
+    # The same page read row by row across all columns,
+    # mirroring the layout in create_pdf.
+    row_entries = row_reading_order(killer_entries)
     row_distance = abs(
-        row_entries.index(KILLER) - row_entries.index("Eli")
+        row_entries.index(KILLER)
+        - row_entries.index(THREE_LETTER_NAME)
     )
+
+    def chapter_names(page_number):
+        first = (chapter_number_for_page(page_number) - 1) \
+            * PAGES_PER_CHAPTER
+
+        return {
+            name
+            for page in pages[first:first + PAGES_PER_CHAPTER]
+            for name in page
+        }
 
     chapter_number = chapter_number_for_page(killer_page)
     chapter_title = CHAPTER_TITLES[chapter_number - 1]
-
-    chapter_first_page = (chapter_number - 1) * 30
-    chapter_last_page = chapter_first_page + 30
-
-    chapter_names = {
-        name
-        for page in pages[
-            chapter_first_page:chapter_last_page
-        ]
-        for name in page
-    }
+    vowel_count = sum(ch in VOWELS for ch in KILLER.lower())
+    rare_count = sum(
+        name.startswith(RARE_INITIAL) for name in killer_entries
+    )
 
     # --------------------------------------------------------
     # All 18 clues
@@ -716,19 +660,18 @@ def validate_puzzle(pages):
     checks = [
         (
             "1. The killer's name is longer than three letters.",
-            len(KILLER) > 3,
+            NAME_CLUES[1](KILLER),
             f"{KILLER} has {len(KILLER)} letters.",
         ),
         (
             "2. The killer's name does not start with an S.",
-            not KILLER.lower().startswith("s"),
+            NAME_CLUES[2](KILLER),
             f"The name starts with {KILLER[0]}.",
         ),
         (
             "3. The killer's name contains at least two vowels.",
-            sum(ch in VOWELS for ch in KILLER.lower()) >= 2,
-            f"{KILLER} contains "
-            f"{sum(ch in VOWELS for ch in KILLER.lower())} vowels.",
+            NAME_CLUES[3](KILLER),
+            f"{KILLER} contains {vowel_count} vowels.",
         ),
         (
             "4. The killer is on a page with a repeated name.",
@@ -737,132 +680,95 @@ def validate_puzzle(pages):
         ),
         (
             "5. The killer's name has no consecutive repeated letter.",
-            not any(
-                KILLER.lower()[i] == KILLER.lower()[i + 1]
-                for i in range(len(KILLER) - 1)
-            ),
+            NAME_CLUES[5](KILLER),
             "No consecutive letters are identical.",
         ),
         (
-            "6. The killer's page is between Anna's page and Zack's page.",
-            anna_page < killer_page < zack_page,
-            f"Anna: {anna_page}; killer: {killer_page}; Zack: {zack_page}.",
+            f"6. The killer's page is between {lower_name}'s page "
+            f"and {upper_name}'s page.",
+            lower_page < killer_page < upper_page,
+            f"{lower_name}: {lower_page}; killer: {killer_page}; "
+            f"{upper_name}: {upper_page}.",
         ),
         (
             "7. The killer's name is not six letters long.",
-            len(KILLER) != 6,
+            NAME_CLUES[7](KILLER),
             f"{KILLER} has {len(KILLER)} letters.",
         ),
         (
             "8. The letters x, y and z are not in the killer's name.",
-            not any(ch in KILLER.lower() for ch in "xyz"),
+            NAME_CLUES[8](KILLER),
             "None of x, y or z occurs in the name.",
         ),
         (
             "9. A three-letter name is no more than ten names away.",
-            len("Eli") == 3
-            and abs(killer_index - eli_index) <= 10
+            len(THREE_LETTER_NAME) == 3
+            and abs(killer_index - three_letter_index) <= 10
             and row_distance <= 10,
-            f"Eli is {abs(killer_index - eli_index)} entries away "
+            f"{THREE_LETTER_NAME} is "
+            f"{abs(killer_index - three_letter_index)} entries away "
             f"reading by column, {row_distance} reading by row.",
         ),
         (
-            "10. The first name on the killer's page shares a letter with the killer.",
+            "10. The first name on the killer's page shares a letter "
+            "with the killer.",
             bool(
-                set(killer_entries[0].lower())
-                & set(KILLER.lower())
+                set(killer_entries[0].lower()) & set(KILLER.lower())
             ),
             f"The first entry is {killer_entries[0]}.",
         ),
         (
-            "11. The killer's page contains fewer than three names starting with M.",
-            sum(
-                name.startswith("M")
-                for name in killer_entries
-            ) < 3,
-            f"{sum(name.startswith('M') for name in killer_entries)} "
-            "names start with M.",
+            "11. The killer's page contains fewer than three names "
+            f"starting with {RARE_INITIAL}.",
+            rare_count < 3,
+            f"{rare_count} names start with {RARE_INITIAL}.",
         ),
         (
             "12. A Kardashian is within four pages of the killer.",
-            abs(kim_page - killer_page) <= 4,
-            f"Kim is on page {kim_page}.",
+            abs(kardashian_page - killer_page) <= 4,
+            f"{KARDASHIAN[0]} is on page {kardashian_page}.",
         ),
         (
-            "13. The killer is not on a page with an even number of names.",
+            "13. The killer is not on a page with an even number "
+            "of names.",
             len(killer_entries) % 2 == 1,
             f"The killer's page has {len(killer_entries)} entries.",
         ),
         (
-            "14. The opposite page contains a US president's first name.",
-            any(
-                name in PRESIDENT_FIRST_NAMES
-                for name in pages[opposite_page - 1]
-            ),
-            f"Page {opposite_page} contains George.",
+            "14. The opposite page contains a US president's first "
+            "name.",
+            all(presidents_on(page) for page in opposite_pages),
+            "; ".join(
+                f"page {page}: {', '.join(presidents_on(page))}"
+                for page in opposite_pages
+            ) + ".",
         ),
         (
-            "15. The killer appears in a chapter with a place in its name.",
+            "15. The killer appears in a chapter with a place in its "
+            "name.",
             CHAPTER_HAS_PLACE[chapter_number - 1],
             f"Chapter {chapter_number}: {chapter_title}. "
             f"{sum(CHAPTER_HAS_PLACE)} of {len(CHAPTERS)} chapter "
             "titles contain a place.",
         ),
         (
-            "16. The killer's page is no more than one page away from Sasha.",
-            abs(sasha_page - killer_page) <= 1,
-            f"Sasha is on page {sasha_page}.",
+            "16. The killer's page is no more than one page away "
+            f"from {NEIGHBOUR[0]}.",
+            abs(neighbour_page - killer_page) <= 1,
+            f"{NEIGHBOUR[0]} is on page {neighbour_page}.",
         ),
         (
             "17. The killer's chapter contains all four Beatles.",
-            BEATLES.issubset(chapter_names),
+            BEATLES.issubset(chapter_names(killer_page)),
             "John, Paul, George and Ringo are in the same chapter.",
         ),
         (
-            "18. The killer isn't Alice.",
-            KILLER != "Alice",
-            f"The killer is {KILLER}.",
+            f"18. The killer isn't {DECOY}.",
+            NAME_CLUES[18](KILLER),
+            f"{DECOY} is on the killer's page and passes every "
+            "other name clue.",
         ),
     ]
-
-    # --------------------------------------------------------
-    # Global integrity checks
-    # --------------------------------------------------------
-
-    assert len(flat) == TOTAL_ENTRIES
-
-    duplicates = {
-        name: count
-        for name, count in counts.items()
-        if count > 1
-    }
-
-    assert duplicates == {REPEATED_NAME: 2}
-
-    assert len(counts) == TOTAL_ENTRIES - 1
-
-    assert len(killer_entries) == 39
-
-    assert len(CHAPTERS) == chapter_number_for_page(TOTAL_PAGES)
-
-    # Clue 15 must eliminate at least one chapter.
-    assert not all(CHAPTER_HAS_PLACE), (
-        "Every chapter title contains a place, so clue 15 "
-        "eliminates nothing."
-    )
-
-    # All names on the killer's page except Catherine must fail
-    # at least one name-level clue.
-    candidates = sorted({
-        name
-        for name in set(killer_entries)
-        if name_satisfies_name_clues(name)
-    })
-
-    assert candidates == [KILLER], (
-        "The killer page does not have a unique name-level "
-        f"candidate. Candidates: {candidates}"
-    )
 
     failed = [
         description
@@ -872,24 +778,130 @@ def validate_puzzle(pages):
 
     if failed:
         raise AssertionError(
-            "Puzzle validation failed:\n"
-            + "\n".join(failed)
+            "Puzzle validation failed:\n" + "\n".join(failed)
         )
 
-    print("All 18 clues passed validation.")
-    print(f"Unique candidate on killer's page: {KILLER}")
+    # --------------------------------------------------------
+    # Global integrity checks
+    # --------------------------------------------------------
 
-    return checks, candidates
+    duplicates = {
+        name: count
+        for name, count in counts.items()
+        if count > 1
+    }
+
+    assert len(flat) == TOTAL_ENTRIES
+    assert duplicates == {REPEATED_NAME: 2}
+    assert len(counts) == TOTAL_ENTRIES - 1
+    assert len(killer_entries) == KILLER_PAGE_SIZE
+    assert len(CHAPTERS) == chapter_number_for_page(TOTAL_PAGES)
+
+    # Clue 15 must eliminate at least one chapter.
+    assert not all(CHAPTER_HAS_PLACE), (
+        "Every chapter title contains a place, so clue 15 "
+        "eliminates nothing."
+    )
+
+    # --------------------------------------------------------
+    # Page-level clues, applied as a solver would
+    # --------------------------------------------------------
+
+    kardashian_pages = [
+        page_number
+        for page_number, page in enumerate(pages, start=1)
+        if KARDASHIAN_FIRST_NAMES & set(page)
+    ]
+
+    assert kardashian_pages == [kardashian_page], (
+        f"Kardashians appear on pages {kardashian_pages}."
+    )
+
+    possible_pages = [
+        page_number
+        for page_number in range(1, TOTAL_PAGES + 1)
+        if len(set(pages[page_number - 1]))
+        < len(pages[page_number - 1])                       # 4
+        and lower_page < page_number < upper_page           # 6
+        and abs(kardashian_page - page_number) <= 4         # 12
+        and len(pages[page_number - 1]) % 2 == 1            # 13
+        and any(
+            presidents_on(page)
+            for page in (page_number - 1, page_number + 1)
+        )                                                   # 14
+        and CHAPTER_HAS_PLACE[
+            chapter_number_for_page(page_number) - 1
+        ]                                                   # 15
+        and abs(neighbour_page - page_number) <= 1          # 16
+        and BEATLES.issubset(chapter_names(page_number))    # 17
+    ]
+
+    assert possible_pages == [killer_page], (
+        f"Page-level clues leave pages {possible_pages}."
+    )
+
+    # Each of clues 4 and 13 alone, within the range of clue 6,
+    # must already single out the killer's page.
+    for clue, test in (
+        ("4", lambda page: len(set(page)) < len(page)),
+        ("13", lambda page: len(page) % 2 == 1),
+    ):
+        matches = [
+            page_number
+            for page_number in range(lower_page + 1, upper_page)
+            if test(pages[page_number - 1])
+        ]
+
+        assert matches == [killer_page], (
+            f"Clue {clue} matches pages {matches}."
+        )
+
+    # --------------------------------------------------------
+    # Name-level clues on the killer's page
+    # --------------------------------------------------------
+
+    eliminations = {
+        name: failed_name_clues(name)
+        for name in dict.fromkeys(killer_entries)
+    }
+
+    candidates = [
+        name for name, failed in eliminations.items() if not failed
+    ]
+
+    assert candidates == [KILLER], (
+        "The killer page does not have a unique name-level "
+        f"candidate. Candidates: {candidates}"
+    )
+
+    # Every name clue must be the only reason some name on the
+    # page is eliminated; otherwise that clue does no work.
+    sole_reasons = {
+        failed[0]
+        for failed in eliminations.values()
+        if len(failed) == 1
+    }
+
+    assert sole_reasons == set(NAME_CLUES), (
+        "These name clues never eliminate a name on their own: "
+        f"{sorted(set(NAME_CLUES) - sole_reasons)}"
+    )
+
+    print("All 18 clues passed validation.")
+    print("Exactly one name is left on the killer's page.")
+
+    return checks, eliminations
 
 
 # ============================================================
 # ANSWER KEY
 # ============================================================
 
-def write_solution_key(checks, candidates):
+def write_solution_key(checks, eliminations):
     """
-    Create a separate text file containing the answer
-    and explanations of all clues.
+    Create a separate text file containing the answer,
+    explanations of all clues and the elimination of every
+    other name on the killer's page.
     """
 
     with OUTPUT_KEY.open("w", encoding="utf-8") as file:
@@ -897,7 +909,7 @@ def write_solution_key(checks, candidates):
         file.write("=" * 55 + "\n\n")
 
         file.write(f"Killer: {KILLER}\n")
-        file.write(f"Internal killer page: {KILLER_PAGE}\n")
+        file.write(f"Killer's page: {KILLER_PAGE}\n")
         file.write(f"Total entries: {TOTAL_ENTRIES:,}\n")
         file.write(f"Distinct names: {TOTAL_ENTRIES - 1:,}\n")
         file.write(f"Total pages: {TOTAL_PAGES:,}\n")
@@ -908,19 +920,21 @@ def write_solution_key(checks, candidates):
 
         for description, passed, explanation in checks:
             file.write(f"{description}\n")
-            file.write(
-                f"Result: {'PASS' if passed else 'FAIL'}\n"
-            )
+            file.write(f"Result: {'PASS' if passed else 'FAIL'}\n")
             file.write(f"Explanation: {explanation}\n\n")
 
-        file.write("CANDIDATE CHECK\n")
+        file.write("NAMES ON THE KILLER'S PAGE\n")
         file.write("=" * 55 + "\n")
 
-        for candidate in candidates:
-            file.write(f"- {candidate}\n")
+        for name, failed in eliminations.items():
+            if failed:
+                reasons = ", ".join(str(number) for number in failed)
+                file.write(f"- {name}: eliminated by clue {reasons}\n")
+            else:
+                file.write(f"- {name}: satisfies every name clue\n")
 
         file.write(
-            "\nOnly Catherine satisfies all name-level clues "
+            f"\nOnly {KILLER} satisfies all name-level clues "
             "on the killer's page.\n"
         )
 
@@ -939,11 +953,11 @@ def main():
     pages = build_pages()
 
     # Do not create the PDF until the clues pass validation.
-    checks, candidates = validate_puzzle(pages)
+    checks, eliminations = validate_puzzle(pages)
 
     create_pdf(pages)
 
-    write_solution_key(checks, candidates)
+    write_solution_key(checks, eliminations)
 
     print()
     print("=" * 60)
